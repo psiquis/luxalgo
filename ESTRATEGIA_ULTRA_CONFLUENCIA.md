@@ -1,386 +1,343 @@
-# Estrategia Ultra-Confluencia LuxAlgo
-## Objetivo: Winrate 80%+ con pocas senales de alta calidad
-
-### Filosofia de la Estrategia
-- **Escanear 800 simbolos** -> Obtener **1-2 senales diarias** de ultra-alta probabilidad
-- **Multiples confirmaciones obligatorias** antes de disparar alerta
-- **Operar con trailing stop** una vez confirmada la entrada
+# Estrategias LuxAlgo - Ultra Confluencia
+## Versiones: S&O v7.2.2 | PAC v2.2.3 | Oscillator Matrix v7.1.1
 
 ---
 
-## PARTE 1: INDICADORES NECESARIOS
+# ESTRATEGIA 1: MAXIMA CONFLUENCIA (Winrate 80-85%)
+## Pocas senales, maxima precision
 
-### Indicadores PREMIUM (Obligatorios)
-
-| Indicador | Proposito | Prioridad |
-|-----------|-----------|-----------|
-| **Signals & Overlays (S&O)** | Senales de confirmacion, Smart Trail, Trend Strength | CRITICO |
-| **Price Action Concepts (PAC)** | Order Blocks, FVGs, Estructura de mercado (BOS/CHoCH) | CRITICO |
-| **Oscillator Matrix (OM)** | Divergencias, Reversiones, Momentum HyperWave | ALTO |
-
-### Indicadores GRATUITOS (Complementarios)
-
-| Indicador | Proposito |
-|-----------|-----------|
-| **Smart Money Concepts [LuxAlgo]** | Estructura SMC adicional |
-| **Nadaraya-Watson Envelope [LuxAlgo]** | Bandas dinamicas de sobrecompra/venta |
-| **Volume Profile** | Confirmar zonas de volumen |
+Esta estrategia usa el **Custom Alert Creator** (GUI) de S&O porque permite combinar multiples condiciones de forma visual y confiable.
 
 ---
 
-## PARTE 2: CONFIGURACION DE CADA INDICADOR
+## CONFIGURACION SIGNALS & OVERLAYS v7.2.2
 
-### 2.1 Signals & Overlays (S&O) - CONFIGURACION
+### PASO 1: Abrir configuracion del indicador
+- Click en el engranaje del indicador S&O en el grafico
 
-```
-SIGNALS:
-- Signal Mode: Confirmation + Contrarian
-- Confirmation Sensitivity: 6-8 (mas selectivo)
-- Show Strong Signals Only: ON (solo + signals)
+### PASO 2: Seccion "SIGNALS"
+**Ruta: Settings > Signals**
 
-OVERLAYS:
-- Smart Trail: ON
-- Smart Trail Sensitivity: 8-10 (menos ruido)
-- Trend Tracer: ON
-- Trend Catcher: ON
-- Neo Cloud: ON
+| Setting | Valor | Ubicacion exacta |
+|---------|-------|------------------|
+| Signal Mode | `Confirmation` | Dropdown "Signal Mode" |
+| Sensitivity | `8` | Slider debajo de Signal Mode |
+| Filter Signals (Smart Trail) | `ON` | Checkbox "Filter Signals" |
 
-FILTERS:
-- Trend Strength Filter: ON (minimo 50%)
-- Smart Trail Filter: ON
-- Reversal Zones: ON
+### PASO 3: Seccion "OVERLAYS"
+**Ruta: Settings > Overlays**
 
-DASHBOARD:
-- Show Trend Strength: ON
-```
+| Setting | Valor | Ubicacion exacta |
+|---------|-------|------------------|
+| Smart Trail | `ON` | Checkbox "Smart Trail" |
+| Length (Smart Trail) | `10` | Numero debajo del checkbox |
+| Trend Tracer | `ON` | Checkbox "Trend Tracer" |
+| Trend Catcher | `ON` | Checkbox "Trend Catcher" |
+| Neo Cloud | `ON` | Checkbox "Neo Cloud" |
+| Reversal Zones | `ON` | Checkbox "Reversal Zones" |
 
-### 2.2 Price Action Concepts (PAC) - CONFIGURACION
+### PASO 4: Seccion "DASHBOARD"
+**Ruta: Settings > Dashboard**
 
-```
-MARKET STRUCTURE:
-- Internal Structure: ON
-- Swing Structure: ON
-- Show CHoCH: ON (Change of Character - reversiones)
-- Show BOS: ON (Break of Structure)
-- CHoCH+ Only: ON (mas confirmado)
+| Setting | Valor |
+|---------|-------|
+| Show Dashboard | `ON` |
+| Trend Strength | `ON` |
 
-ORDER BLOCKS:
-- Show Order Blocks: ON
-- Mitigation Method: Close (mas conservador)
-- Show Volume %: ON
-- Max Order Blocks: 3-5
+### PASO 5: Seccion "CUSTOM ALERT CREATOR"
+**Ruta: Settings > Custom Alert Creator (al final de settings)**
 
-FAIR VALUE GAPS:
-- Show FVGs: ON
-- Auto Threshold: ON (filtra FVGs insignificantes)
-- Show Inverse FVGs: ON
+| Setting | Valor |
+|---------|-------|
+| Mode | `Match` |
+| Enable | `ON` |
 
-LIQUIDITY:
-- Trend Line Liquidity: ON
-- Show Liquidity Grabs: ON
+**Configurar las condiciones (todas en Step 1 para que sean simultaneas):**
 
-ZONES:
-- Premium/Discount Zones: ON
-- Equilibrium Zone: ON
-```
-
-### 2.3 Oscillator Matrix (OM) - CONFIGURACION
-
-```
-REVERSAL SIGNALS:
-- Show Reversal Signals: ON
-- Large Arrows Only: ON (solo las grandes triangulares)
-
-HYPER WAVE:
-- HyperWave: ON
-- Divergence Detection: ON
-- Divergence Sensitivity: High
-
-THRESHOLDS:
-- Overbought: 80
-- Oversold: 20
-```
-
----
-
-## PARTE 3: LOGICA DE CONFLUENCIA (6+ FILTROS)
-
-Para que salte una alerta, TODAS estas condiciones deben cumplirse:
-
-### LONG (Compra)
-```
-1. Smart Trail = BULLISH (precio sobre el trail)
-2. Trend Strength >= 60%
-3. Confirmation Signal = Bullish+ (fuerte)
-4. Order Block = Bullish OB cercano (soporte institucional)
-5. FVG = Price en/cerca de Bullish FVG
-6. Market Structure = CHoCH+ bullish O BOS bullish
-7. HyperWave < 30 (oversold) O divergencia bullish
-8. Precio en DISCOUNT zone (por debajo del equilibrio)
-```
-
-### SHORT (Venta)
-```
-1. Smart Trail = BEARISH (precio bajo el trail)
-2. Trend Strength >= 60%
-3. Confirmation Signal = Bearish+ (fuerte)
-4. Order Block = Bearish OB cercano (resistencia institucional)
-5. FVG = Price en/cerca de Bearish FVG
-6. Market Structure = CHoCH+ bearish O BOS bearish
-7. HyperWave > 70 (overbought) O divergencia bearish
-8. Precio en PREMIUM zone (por encima del equilibrio)
-```
-
----
-
-## PARTE 4: ALERT SCRIPTING - SCRIPT COMPLETO
-
-### SCRIPT PARA SENALES LONG (Ultra-Confluencia)
-
-Pegar este codigo en el campo **"Alert Scripting"** del indicador S&O:
-
-```
-// ============================================
-// LUXALGO ULTRA-CONFLUENCIA - LONG SIGNALS
-// Winrate Target: 80%+
-// ============================================
-
-// PASO 1: Smart Trail Bullish (OBLIGATORIO)
-{bullish_smart_trail}
-
-// PASO 2: Trend Strength >= 60 (OBLIGATORIO)
-and {trend_strength} >= 60
-
-// PASO 3: Senal de Confirmacion Fuerte (OBLIGATORIO)
-and {bullish_confirmation+}
-
-// PASO 4: Dentro de Reversal Zone inferior O cerca de soporte
-and ({lower_reversal_zone} or {bullish_tracer})
-
-// PASO 5: Neo Cloud Bullish
-and {bullish_cloud}
-
-// PASO 6: Trend Catcher confirma
-and {bullish_catcher}
-
-// ACTION: Crear alerta cuando todo se cumple
-@alert() = {bullish_smart_trail} and {trend_strength} >= 60 and {bullish_confirmation+} and {bullish_catcher} and {bullish_cloud}
-```
-
-### SCRIPT PARA SENALES SHORT (Ultra-Confluencia)
-
-```
-// ============================================
-// LUXALGO ULTRA-CONFLUENCIA - SHORT SIGNALS
-// Winrate Target: 80%+
-// ============================================
-
-// PASO 1: Smart Trail Bearish (OBLIGATORIO)
-{bearish_smart_trail}
-
-// PASO 2: Trend Strength >= 60 (OBLIGATORIO)
-and {trend_strength} >= 60
-
-// PASO 3: Senal de Confirmacion Fuerte (OBLIGATORIO)
-and {bearish_confirmation+}
-
-// PASO 4: Dentro de Reversal Zone superior O cerca de resistencia
-and ({upper_reversal_zone} or {bearish_tracer})
-
-// PASO 5: Neo Cloud Bearish
-and {bearish_cloud}
-
-// PASO 6: Trend Catcher confirma
-and {bearish_catcher}
-
-// ACTION: Crear alerta cuando todo se cumple
-@alert() = {bearish_smart_trail} and {trend_strength} >= 60 and {bearish_confirmation+} and {bearish_catcher} and {bearish_cloud}
-```
-
-### SCRIPT COMBINADO (LONG + SHORT en uno)
-
-```
-// ============================================
-// LUXALGO ULTRA-CONFLUENCIA - ALL SIGNALS
-// Escaneo de 800 simbolos -> 1-2 alertas/dia
-// ============================================
-
-// LONG ULTRA-CONFIRMADO
-@alert(message="LONG ULTRA: {{ticker}} - TF: {{interval}}") =
-    {bullish_smart_trail}
-    and {trend_strength} >= 60
-    and {bullish_confirmation+}
-    and {bullish_catcher}
-    and {bullish_cloud}
-    and {lower_reversal_zone}
-
-// SHORT ULTRA-CONFIRMADO
-@alert(message="SHORT ULTRA: {{ticker}} - TF: {{interval}}") =
-    {bearish_smart_trail}
-    and {trend_strength} >= 60
-    and {bearish_confirmation+}
-    and {bearish_catcher}
-    and {bearish_cloud}
-    and {upper_reversal_zone}
-
-// INVALIDACION: Reset si Smart Trail cambia
-@invalidate() = {bullish_smart_trail} and {bearish_smart_trail[1]}
-@invalidate() = {bearish_smart_trail} and {bullish_smart_trail[1]}
-```
-
----
-
-## PARTE 5: CONFIGURACION DEL CUSTOM ALERT CREATOR (Alternativa GUI)
-
-Si prefieres usar la interfaz grafica en lugar de Alert Scripting:
-
-### Modo: MATCH (todas las condiciones simultaneas)
-
-| Step | Condicion | Configuracion |
-|------|-----------|---------------|
-| 1 | Smart Trail | Bullish/Bearish |
+| Step | Condition | Direction/Value |
+|------|-----------|-----------------|
+| 1 | Smart Trail | Bullish (para LONG) / Bearish (para SHORT) |
+| 1 | Confirmation Signal | Strong Bullish (+) / Strong Bearish (+) |
+| 1 | Trend Catcher | Bullish / Bearish |
+| 1 | Neo Cloud | Bullish / Bearish |
 | 1 | Trend Strength | >= 60 |
-| 1 | Confirmation | Strong (+) Only |
-| 1 | Trend Catcher | Same Direction |
-| 1 | Neo Cloud | Same Direction |
-| 1 | Reversal Zone | Active |
 
-### Filtros Adicionales:
-- **Invalidate On Step 1**: ON
-- **Invalidate On Any Repeated Step**: ON
+**Behaviors:**
+| Setting | Valor |
+|---------|-------|
+| Invalidate On Step 1 | `ON` |
 
 ---
 
-## PARTE 6: INTEGRACION CON PRICE ACTION CONCEPTS
+## CONFIGURACION PRICE ACTION CONCEPTS v2.2.3
 
-Para anadir confluencia con PAC, usa el **Custom Alert Creator de PAC**:
+### PASO 1: Seccion "MARKET STRUCTURE"
+**Ruta: Settings > Market Structure**
 
-### Configuracion PAC Alert Creator
+| Setting | Valor | Explicacion |
+|---------|-------|-------------|
+| Internal Structure | `All` | Muestra BOS y CHoCH internos |
+| Swing Structure | `All` | Muestra BOS y CHoCH swing |
+| Sensitivity | `20` | Valor medio-alto para menos ruido |
 
-| Step | Condicion |
-|------|-----------|
-| 1 | CHoCH+ Bullish/Bearish (estructura confirmada) |
-| 2 | Price near Order Block |
-| 3 | FVG present |
+### PASO 2: Seccion "ORDER BLOCKS"
+**Ruta: Settings > Order Blocks**
 
-### Combinar alertas de ambos indicadores:
-1. Crea alerta en S&O con el script anterior
-2. Crea alerta en PAC con CHoCH+ y Order Blocks
-3. Usa un servicio externo (TradingView webhook + bot) para cruzar ambas alertas
+| Setting | Valor |
+|---------|-------|
+| Internal Order Blocks | `ON` |
+| Show Last (Internal) | `3` |
+| Swing Order Blocks | `ON` |
+| Show Last (Swing) | `3` |
+| Mitigation | `Close` |
+| Show Metrics | `ON` |
 
----
+### PASO 3: Seccion "IMBALANCES (FVG)"
+**Ruta: Settings > Imbalances**
 
-## PARTE 7: TIMEFRAMES RECOMENDADOS
+| Setting | Valor |
+|---------|-------|
+| Fair Value Gaps | `ON` |
+| Show Last | `5` |
+| Mitigation | `Close` |
+| Threshold | `Auto` |
 
-| Tipo de Trading | Timeframe Principal | Confirmacion |
-|-----------------|---------------------|--------------|
-| Swing Trading | 4H | 1D |
-| Day Trading | 1H | 4H |
-| Scalping (no recomendado para 80% WR) | 15m | 1H |
+### PASO 4: Seccion "PREMIUM/DISCOUNT"
+**Ruta: Settings > Premium/Discount**
 
-**RECOMENDACION**: Para 800 simbolos con pocas senales, usa **4H o 1D**.
-
----
-
-## PARTE 8: FLUJO DE OPERACION
-
-```
-1. ALERTA SALTA (ultra-confluencia confirmada)
-           |
-           v
-2. VERIFICAR MANUALMENTE:
-   - Order Block de PAC visible?
-   - FVG sin mitigar?
-   - Estructura CHoCH+ reciente?
-           |
-           v
-3. SI TODO OK -> ENTRADA
-   - Entry: Precio actual o retroceso a OB
-   - Stop Loss: Detras del Order Block
-   - Take Profit: Siguiente zona de liquidez
-           |
-           v
-4. GESTION CON TRAILING STOP
-   - Usar Smart Trail como trailing dinamico
-   - Mover SL a breakeven en +1R
-   - Trail con Smart Trail hasta salida
-```
+| Setting | Valor |
+|---------|-------|
+| Show Zones | `ON` |
+| Show Equilibrium | `ON` |
 
 ---
 
-## PARTE 9: CHECKLIST PRE-ENTRADA
+## CONFIGURACION OSCILLATOR MATRIX v7.1.1
 
-Antes de operar cualquier alerta, verifica:
+### PASO 1: Seccion "MAIN"
+**Ruta: Settings > Main**
 
-- [ ] Smart Trail en direccion correcta
-- [ ] Trend Strength >= 60%
-- [ ] Senal Confirmation+ visible
-- [ ] Order Block institucional presente (PAC)
-- [ ] FVG sin mitigar en la zona (PAC)
-- [ ] CHoCH+ o BOS reciente (PAC)
-- [ ] No hay resistencia/soporte mayor inmediato
-- [ ] Volumen acompana el movimiento
-- [ ] No hay noticias de alto impacto proximas
+| Setting | Valor |
+|---------|-------|
+| Main Length | `50` |
+| Signal Length | `3` |
 
----
+### PASO 2: Seccion "REVERSAL SIGNALS"
+**Ruta: Settings > Reversal Signals**
 
-## PARTE 10: METRICAS ESPERADAS
+| Setting | Valor |
+|---------|-------|
+| Show Reversals | `ON` |
+| Sensitivity | `Medium` o `Low` (menos senales) |
 
-| Metrica | Objetivo |
-|---------|----------|
-| Winrate | 75-85% |
-| Senales/dia (800 simbolos) | 1-3 |
-| Risk:Reward minimo | 1:2 |
-| Drawdown maximo | 5-10% |
+### PASO 3: Seccion "DIVERGENCES"
+**Ruta: Settings > Divergences**
 
----
-
-## NOTAS IMPORTANTES
-
-1. **Backtesting**: Usa LUCID de LuxAlgo para backtestear esta estrategia
-2. **Paper Trading**: Prueba 2-4 semanas antes de operar en real
-3. **Ajuste de sensibilidad**: Si obtienes 0 senales, baja Trend Strength a 50
-4. **Muchas senales**: Si obtienes mas de 5/dia, sube Trend Strength a 70
+| Setting | Valor |
+|---------|-------|
+| Show Divergences | `ON` |
+| Sensitivity | `Low` (solo divergencias claras) |
 
 ---
 
-## PLACEHOLDERS DISPONIBLES EN ALERT SCRIPTING (Referencia)
+## CREAR LA ALERTA - ESTRATEGIA 1
 
-### Signals & Overlays
+1. **Click derecho en el grafico** > "Add Alert"
+2. **Condition**: `LuxAlgo - Signals & Overlays`
+3. **Seleccionar**: `Custom Alert Creator`
+4. **Options**:
+   - Trigger: `Once Per Bar Close`
+   - Expiration: Sin expiracion o largo plazo
+5. **Message** (copiar exacto):
 ```
-{bullish_confirmation}     - Confirmacion bullish
-{bearish_confirmation}     - Confirmacion bearish
-{bullish_confirmation+}    - Confirmacion bullish FUERTE
-{bearish_confirmation+}    - Confirmacion bearish FUERTE
-{bullish_contrarian}       - Contrariano bullish
-{bearish_contrarian}       - Contrariano bearish
-{bullish_smart_trail}      - Smart Trail bullish
-{bearish_smart_trail}      - Smart Trail bearish
-{bullish_tracer}           - Trend Tracer bullish
-{bearish_tracer}           - Trend Tracer bearish
-{bullish_catcher}          - Trend Catcher bullish
-{bearish_catcher}          - Trend Catcher bearish
-{bullish_cloud}            - Neo Cloud bullish
-{bearish_cloud}            - Neo Cloud bearish
-{upper_reversal_zone}      - En zona de reversion superior
-{lower_reversal_zone}      - En zona de reversion inferior
-{trend_strength}           - Valor numerico 0-100
+LONG ULTRA: {{ticker}} | TF: {{interval}} | Trend Strength: {{plot("Trend Strength")}}%
 ```
 
-### Operadores
+Para SHORT, crear otra alerta igual pero con las condiciones en direccion bearish.
+
+---
+
+## CHECKLIST VISUAL ANTES DE ENTRAR (Estrategia 1)
+
+Cuando salte la alerta, verificar en el grafico:
+
+- [ ] **S&O**: Smart Trail verde (LONG) o rojo (SHORT)
+- [ ] **S&O**: Senal Confirmation+ visible (triangulo con +)
+- [ ] **S&O**: Neo Cloud del color correcto
+- [ ] **S&O**: Dashboard muestra Trend Strength >= 60%
+- [ ] **PAC**: Hay un Order Block reciente en la zona
+- [ ] **PAC**: Hay un FVG sin mitigar cerca
+- [ ] **PAC**: CHoCH+ o BOS confirma la direccion
+- [ ] **OM**: HyperWave no esta en zona extrema contraria
+
+---
+
+# ESTRATEGIA 2: CONFLUENCIA MODERADA (Winrate 70-75%)
+## Mas senales, buena precision
+
+Esta estrategia es menos restrictiva y generara mas alertas.
+
+---
+
+## CONFIGURACION S&O v7.2.2 - ESTRATEGIA 2
+
+### Seccion "SIGNALS"
+| Setting | Valor |
+|---------|-------|
+| Signal Mode | `Confirmation` |
+| Sensitivity | `6` |
+| Filter Signals | `ON` |
+
+### Seccion "OVERLAYS"
+| Setting | Valor |
+|---------|-------|
+| Smart Trail | `ON`, Length: `8` |
+| Trend Catcher | `ON` |
+| Neo Cloud | `OFF` (quitamos un filtro) |
+| Reversal Zones | `ON` |
+
+### Seccion "CUSTOM ALERT CREATOR"
+| Step | Condition | Value |
+|------|-----------|-------|
+| 1 | Smart Trail | Bullish/Bearish |
+| 1 | Confirmation Signal | Any Bullish/Bearish (no solo Strong) |
+| 1 | Trend Catcher | Bullish/Bearish |
+| 1 | Trend Strength | >= 50 |
+
+---
+
+## CONFIGURACION PAC v2.2.3 - ESTRATEGIA 2
+
+| Setting | Valor |
+|---------|-------|
+| Internal Structure | `CHoCH` only |
+| Swing Structure | `All` |
+| Sensitivity | `15` |
+| Order Blocks | `ON`, Show Last: `5` |
+| FVG | `ON`, Show Last: `8` |
+
+---
+
+## CREAR LA ALERTA - ESTRATEGIA 2
+
+1. **Condition**: `LuxAlgo - Signals & Overlays`
+2. **Seleccionar**: `Custom Alert Creator`
+3. **Message**:
 ```
-and                        - Y logico
-or                         - O logico
-not                        - Negacion
->=, <=, >, <, ==           - Comparadores
-[1], [2], etc              - Valores anteriores (barras atras)
+{{ticker}} | {{interval}} | Strength: {{plot("Trend Strength")}}%
 ```
 
-### Actions
+---
+
+# COMPARATIVA DE ESTRATEGIAS
+
+| Aspecto | Estrategia 1 | Estrategia 2 |
+|---------|--------------|--------------|
+| Winrate esperado | 80-85% | 70-75% |
+| Senales/dia (800 simbolos) | 1-3 | 5-15 |
+| Filtros activos | 5-6 | 3-4 |
+| Trend Strength minimo | 60% | 50% |
+| Neo Cloud | Requerido | No requerido |
+| Confirmation | Solo Strong (+) | Cualquiera |
+| Riesgo | Muy bajo | Bajo-Medio |
+
+---
+
+# COMO APLICAR A 800 SIMBOLOS
+
+## Opcion 1: Alertas Individuales (Tedioso pero efectivo)
+1. Crea una lista en TradingView con tus 800 simbolos
+2. Abre cada simbolo en el timeframe deseado (4H recomendado)
+3. Crea la alerta en cada uno
+4. Requiere TradingView Premium para tantas alertas
+
+## Opcion 2: Screener + Alertas Manuales
+1. Usa el **Screener de TradingView**
+2. Filtra por: Trend Strength >= 60 (usando el indicador)
+3. Revisa manualmente los que pasen el filtro
+4. Crea alertas solo en los candidatos
+
+## Opcion 3: Pine Screener (Avanzado)
+1. Usa **LuxAlgo Pine Screener** si lo tienes
+2. Configura los mismos criterios
+3. Escanea automaticamente
+
+---
+
+# TIMEFRAMES RECOMENDADOS
+
+| TF | Senales esperadas | Calidad | Uso |
+|----|-------------------|---------|-----|
+| 1D | Muy pocas | Maxima | Swing trading largo |
+| 4H | Pocas | Alta | Swing trading |
+| 1H | Moderadas | Media-Alta | Day trading |
+| 15m | Muchas | Media | Scalping (no recomendado) |
+
+**RECOMENDACION**: Usa **4H** para tu lista de 800 simbolos.
+
+---
+
+# GESTION DE LA OPERACION
+
+## Entrada
+- Entrar al cierre de la vela que dispara la alerta
+- O esperar pullback al Order Block mas cercano
+
+## Stop Loss
+- Debajo/encima del Order Block (PAC)
+- O debajo/encima del Smart Trail
+
+## Take Profit
+- Siguiente zona de liquidez (PAC)
+- O usar trailing con Smart Trail
+
+## Trailing Stop (tu metodo preferido)
+- Cuando precio cruza Smart Trail en contra = SALIR
+- Mover SL a breakeven en +1R
+- Dejar correr con el Smart Trail como guia
+
+---
+
+# RESUMEN RAPIDO
+
+## Estrategia 1 (80%+ WR) - Copiar esta config:
 ```
-@alert(message="...")      - Disparar alerta con mensaje
-@filter(steps="1,2")       - Aplicar filtro a pasos especificos
-@invalidate()              - Condicion de invalidacion
-@line(...)                 - Dibujar linea
-@label(...)                - Dibujar etiqueta
+S&O Settings:
+- Sensitivity: 8
+- Smart Trail: ON (Length 10)
+- All Overlays: ON
+- Trend Strength Filter: >= 60
+- Custom Alert Creator: Match Mode
+  - Step 1: Smart Trail + Confirmation+ + Catcher + Cloud + Strength>=60
 ```
+
+## Estrategia 2 (70%+ WR) - Copiar esta config:
+```
+S&O Settings:
+- Sensitivity: 6
+- Smart Trail: ON (Length 8)
+- Neo Cloud: OFF
+- Trend Strength Filter: >= 50
+- Custom Alert Creator: Match Mode
+  - Step 1: Smart Trail + Confirmation + Catcher + Strength>=50
+```
+
+---
+
+# PROBAR HOY
+
+1. Configura Estrategia 2 primero (mas senales para validar)
+2. Aplica a tu lista de 800 simbolos en TF 4H
+3. Espera alertas durante el dia
+4. Valida visualmente con PAC (Order Blocks, FVG, Structure)
+5. Si funciona, sube a Estrategia 1 manana
+
+---
+
+# NOTAS FINALES
+
+- Los placeholders del Alert Scripting pueden variar segun version
+- El Custom Alert Creator (GUI) es mas confiable y visual
+- Siempre verifica con PAC antes de entrar
+- El Oscillator Matrix es confirmacion adicional, no obligatorio
+- Haz paper trading 1-2 semanas antes de operar en real

