@@ -1,0 +1,185 @@
+============================================================
+LUXALGO ALERT SCRIPTING - SCRIPTS LISTOS PARA COPIAR/PEGAR
+============================================================
+
+INSTRUCCIONES:
+1. Abre el indicador Signals & Overlays en TradingView
+2. Ve a Configuracion (engranaje)
+3. Busca la seccion "Alert Scripting"
+4. Pega el script deseado en el campo de texto
+5. Crea la alerta en TradingView seleccionando "Any alert() function call"
+
+============================================================
+SCRIPT 1: LONG ULTRA-CONFLUENCIA (Conservador)
+============================================================
+Requiere: 6 confirmaciones simultaneas
+Senales esperadas: Muy pocas (1-2 por 800 simbolos)
+
+--- COPIAR DESDE AQUI ---
+
+@alert(message="LONG ULTRA: {{ticker}} | TF: {{interval}} | Trend: {{plot('Trend Strength')}}%") = {bullish_smart_trail} and {trend_strength} >= 60 and {bullish_confirmation+} and {bullish_catcher} and {bullish_cloud} and {lower_reversal_zone}
+
+--- HASTA AQUI ---
+
+
+============================================================
+SCRIPT 2: SHORT ULTRA-CONFLUENCIA (Conservador)
+============================================================
+Requiere: 6 confirmaciones simultaneas
+Senales esperadas: Muy pocas (1-2 por 800 simbolos)
+
+--- COPIAR DESDE AQUI ---
+
+@alert(message="SHORT ULTRA: {{ticker}} | TF: {{interval}} | Trend: {{plot('Trend Strength')}}%") = {bearish_smart_trail} and {trend_strength} >= 60 and {bearish_confirmation+} and {bearish_catcher} and {bearish_cloud} and {upper_reversal_zone}
+
+--- HASTA AQUI ---
+
+
+============================================================
+SCRIPT 3: LONG + SHORT COMBINADO (Conservador)
+============================================================
+Un solo script para ambas direcciones
+
+--- COPIAR DESDE AQUI ---
+
+@alert(message="LONG ULTRA: {{ticker}} | TF: {{interval}} | Strength: {{plot('Trend Strength')}}%") = {bullish_smart_trail} and {trend_strength} >= 60 and {bullish_confirmation+} and {bullish_catcher} and {bullish_cloud} and {lower_reversal_zone}
+
+@alert(message="SHORT ULTRA: {{ticker}} | TF: {{interval}} | Strength: {{plot('Trend Strength')}}%") = {bearish_smart_trail} and {trend_strength} >= 60 and {bearish_confirmation+} and {bearish_catcher} and {bearish_cloud} and {upper_reversal_zone}
+
+--- HASTA AQUI ---
+
+
+============================================================
+SCRIPT 4: LONG MODERADO (Menos filtros)
+============================================================
+Requiere: 4 confirmaciones
+Senales esperadas: Moderadas (5-10 por 800 simbolos)
+
+--- COPIAR DESDE AQUI ---
+
+@alert(message="LONG: {{ticker}} | {{interval}}") = {bullish_smart_trail} and {trend_strength} >= 50 and {bullish_confirmation+} and {bullish_catcher}
+
+--- HASTA AQUI ---
+
+
+============================================================
+SCRIPT 5: SHORT MODERADO (Menos filtros)
+============================================================
+Requiere: 4 confirmaciones
+Senales esperadas: Moderadas (5-10 por 800 simbolos)
+
+--- COPIAR DESDE AQUI ---
+
+@alert(message="SHORT: {{ticker}} | {{interval}}") = {bearish_smart_trail} and {trend_strength} >= 50 and {bearish_confirmation+} and {bearish_catcher}
+
+--- HASTA AQUI ---
+
+
+============================================================
+SCRIPT 6: REVERSAL ULTRA (Solo reversiones extremas)
+============================================================
+Para cazar reversiones en zonas extremas
+Winrate potencial: 85%+ pero MUY pocas senales
+
+--- COPIAR DESDE AQUI ---
+
+@alert(message="REVERSAL LONG: {{ticker}} | EXTREME OVERSOLD") = {lower_reversal_zone} and {bullish_contrarian+} and {trend_strength} <= 30 and {bullish_catcher}
+
+@alert(message="REVERSAL SHORT: {{ticker}} | EXTREME OVERBOUGHT") = {upper_reversal_zone} and {bearish_contrarian+} and {trend_strength} >= 70 and {bearish_catcher}
+
+--- HASTA AQUI ---
+
+
+============================================================
+SCRIPT 7: TREND FOLLOWING (Solo tendencias fuertes)
+============================================================
+Para seguir tendencias establecidas
+Mejor para mercados en tendencia clara
+
+--- COPIAR DESDE AQUI ---
+
+@alert(message="TREND LONG: {{ticker}} | STRONG UPTREND") = {bullish_smart_trail} and {trend_strength} >= 70 and {bullish_confirmation+} and {bullish_tracer} and {bullish_cloud}
+
+@alert(message="TREND SHORT: {{ticker}} | STRONG DOWNTREND") = {bearish_smart_trail} and {trend_strength} >= 70 and {bearish_confirmation+} and {bearish_tracer} and {bearish_cloud}
+
+--- HASTA AQUI ---
+
+
+============================================================
+SCRIPT 8: CON INVALIDACION (Avanzado)
+============================================================
+Incluye condiciones de invalidacion para mayor precision
+
+--- COPIAR DESDE AQUI ---
+
+@alert(message="LONG VALIDATED: {{ticker}}") = {bullish_smart_trail} and {trend_strength} >= 60 and {bullish_confirmation+} and {bullish_catcher} and {bullish_cloud}
+
+@alert(message="SHORT VALIDATED: {{ticker}}") = {bearish_smart_trail} and {trend_strength} >= 60 and {bearish_confirmation+} and {bearish_catcher} and {bearish_cloud}
+
+@invalidate() = {bullish_smart_trail} and {bearish_smart_trail[1]}
+@invalidate() = {bearish_smart_trail} and {bullish_smart_trail[1]}
+
+--- HASTA AQUI ---
+
+
+============================================================
+SCRIPT 9: SECUENCIA (Step Mode)
+============================================================
+Alerta cuando las condiciones ocurren en secuencia
+Paso 1: Smart Trail cambia
+Paso 2: Confirmacion fuerte aparece
+
+--- COPIAR DESDE AQUI ---
+
+@step(1) = {bullish_smart_trail} and not {bullish_smart_trail[1]}
+@step(2) = {bullish_confirmation+}
+@alert(message="SEQUENCE LONG: {{ticker}} - Smart Trail + Confirmation") = @step(2)
+
+@step(1) = {bearish_smart_trail} and not {bearish_smart_trail[1]}
+@step(2) = {bearish_confirmation+}
+@alert(message="SEQUENCE SHORT: {{ticker}} - Smart Trail + Confirmation") = @step(2)
+
+--- HASTA AQUI ---
+
+
+============================================================
+SCRIPT 10: MENSAJE JSON (Para bots/webhooks)
+============================================================
+Formato JSON para integracion con bots de trading
+
+--- COPIAR DESDE AQUI ---
+
+@alert(message='{"signal":"LONG","ticker":"{{ticker}}","timeframe":"{{interval}}","strength":"{{plot(\'Trend Strength\')}}","price":"{{close}}","time":"{{time}}"}') = {bullish_smart_trail} and {trend_strength} >= 60 and {bullish_confirmation+} and {bullish_catcher}
+
+@alert(message='{"signal":"SHORT","ticker":"{{ticker}}","timeframe":"{{interval}}","strength":"{{plot(\'Trend Strength\')}}","price":"{{close}}","time":"{{time}}"}') = {bearish_smart_trail} and {trend_strength} >= 60 and {bearish_confirmation+} and {bearish_catcher}
+
+--- HASTA AQUI ---
+
+
+============================================================
+NOTAS IMPORTANTES
+============================================================
+
+1. CREAR LA ALERTA EN TRADINGVIEW:
+   - Boton derecho en el grafico > Crear alerta
+   - Condicion: Signals & Overlays
+   - Seleccionar: "Any alert() function call"
+   - Mensaje: Dejar vacio (el script lo define)
+   - Frecuencia: "Once per bar close" (recomendado)
+
+2. APLICAR A 800 SIMBOLOS:
+   - Necesitas TradingView Premium/Pro+ para muchas alertas
+   - Alternativa: Usa screener + alertas manuales
+   - Considera usar Pine Screener con estos criterios
+
+3. AJUSTAR SENSIBILIDAD:
+   - Muy pocas senales? Baja trend_strength a 50
+   - Muchas senales? Sube trend_strength a 70
+   - Quita {lower_reversal_zone} para mas senales
+
+4. TIMEFRAMES RECOMENDADOS:
+   - 4H: Mejor balance senal/ruido
+   - 1D: Menos senales, mayor calidad
+   - 1H: Mas senales, verificar manualmente
+
+============================================================
