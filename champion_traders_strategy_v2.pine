@@ -1,0 +1,467 @@
+//@version=6
+strategy("Champion Traders Strategy V2 - Minervini VCP + CANSLIM",
+         overlay=true,
+         initial_capital=100000,
+         default_qty_type=strategy.percent_of_equity,
+         default_qty_value=10,
+         commission_type=strategy.commission.percent,
+         commission_value=0.1,
+         slippage=2,
+         pyramiding=0)
+
+// ============================================================================
+// PARÁMETROS DE ENTRADA
+// ============================================================================
+
+// Configuración de Trend Template (Mark Minervini)
+trendGroup = "═══ TREND TEMPLATE MINERVINI ═══"
+len50 = input.int(50, "MA 50 Períodos", group=trendGroup)
+len150 = input.int(150, "MA 150 Períodos", group=trendGroup)
+len200 = input.int(200, "MA 200 Períodos", group=trendGroup)
+priceAbove52wkLow = input.float(30.0, "% Mínimo sobre 52W Low", group=trendGroup)
+priceNear52wkHigh = input.float(25.0, "% Máximo desde 52W High", group=trendGroup)
+trendCheckBars = input.int(20, "Barras para verificar tendencia MA200", group=trendGroup)
+
+// Configuración de VCP (Volatility Contraction Pattern)
+vcpGroup = "═══ VCP PATTERN ═══"
+enableVCP = input.bool(true, "Activar detección VCP", group=vcpGroup)
+vcpLookback = input.int(20, "Lookback VCP (barras)", minval=10, maxval=50, group=vcpGroup)
+atrContractionPeriod = input.int(14, "Período ATR para contracción", group=vcpGroup)
+contractionThreshold = input.float(0.6, "Umbral de contracción ATR", minval=0.3, maxval=0.9, step=0.05, group=vcpGroup)
+
+// Configuración de Volumen
+volGroup = "═══ ANÁLISIS DE VOLUMEN ═══"
+volMA = input.int(20, "Períodos MA Volumen", group=volGroup)
+volBreakoutMultiplier = input.float(1.5, "Multiplicador Ruptura Vol.", minval=1.0, maxval=3.0, step=0.1, group=volGroup)
+requireVolBreakout = input.bool(true, "Requerir ruptura de volumen", group=volGroup)
+
+// Configuración de Relative Strength
+rsGroup = "═══ RELATIVE STRENGTH ═══"
+enableRS = input.bool(true, "Activar filtro RS", group=rsGroup)
+rsLength = input.int(63, "Períodos RS (3 meses trading)", group=rsGroup)
+rsThreshold = input.int(70, "RS Rating Mínimo", minval=50, maxval=95, group=rsGroup)
+benchmarkSymbol = input.symbol("SPY", "Símbolo Benchmark", group=rsGroup)
+
+// Configuración de Gestión de Riesgo
+riskGroup = "═══ GESTIÓN DE RIESGO ═══"
+stopLossType = input.string("Percentage", "Tipo de Stop Loss", options=["Percentage", "ATR"], group=riskGroup)
+stopLossPercent = input.float(7.0, "Stop Loss (%)", minval=3.0, maxval=15.0, step=0.5, group=riskGroup)
+stopLossATRMulti = input.float(2.0, "Stop Loss (ATR Multiplicador)", minval=1.0, maxval=5.0, step=0.5, group=riskGroup)
+takeProfitRatio = input.float(3.0, "Ratio Riesgo/Beneficio", minval=1.5, maxval=5.0, step=0.5, group=riskGroup)
+
+// Configuración de Trailing Stop
+trailGroup = "═══ TRAILING STOP ═══"
+enableTrailing = input.bool(true, "Activar Trailing Stop", group=trailGroup)
+trailType = input.string("ATR", "Tipo de Trailing", options=["Percentage", "ATR"], group=trailGroup)
+trailPercent = input.float(3.0, "Trailing % desde máximo", minval=1.0, maxval=10.0, step=0.5, group=trailGroup)
+trailATRMulti = input.float(2.5, "Trailing ATR Multiplicador", minval=1.0, maxval=5.0, step=0.5, group=trailGroup)
+trailActivation = input.float(1.5, "Activar trail en R múltiplo", minval=0.5, maxval=3.0, step=0.5, group=trailGroup)
+moveToBreakeven = input.bool(true, "Mover a B/E cuando trail activo", group=trailGroup)
+
+// Configuración de Salidas
+exitGroup = "═══ CONDICIONES DE SALIDA ═══"
+exitOnTrendBreak = input.bool(true, "Salir si rompe MA50", group=exitGroup)
+exitOnMA150Break = input.bool(false, "Salir si rompe MA150", group=exitGroup)
+
+// Configuración de Filtros Adicionales
+filterGroup = "═══ FILTROS ADICIONALES ═══"
+minVolume = input.int(100000, "Volumen mínimo promedio", minval=0, group=filterGroup)
+minPrice = input.float(5.0, "Precio mínimo", minval=0.0, group=filterGroup)
+
+// Configuración de Visualización
+displayGroup = "═══ VISUALIZACIÓN ═══"
+showMAs = input.bool(true, "Mostrar Medias Móviles", group=displayGroup)
+showLevels = input.bool(true, "Mostrar niveles 52W", group=displayGroup)
+showTable = input.bool(true, "Mostrar tabla información", group=displayGroup)
+showZones = input.bool(true, "Mostrar zonas riesgo/beneficio", group=displayGroup)
+
+// ============================================================================
+// CÁLCULO DE INDICADORES TÉCNICOS
+// ============================================================================
+
+// Medias Móviles
+ma50 = ta.sma(close, len50)
+ma150 = ta.sma(close, len150)
+ma200 = ta.sma(close, len200)
+
+// Verificar que MA200 está en tendencia alcista
+ma200Rising = ma200 > ma200[trendCheckBars]
+ma50Rising = ma50 > ma50[10]
+
+// ATR para stop loss y trailing
+atr = ta.atr(14)
+atrContraction = ta.atr(atrContractionPeriod)
+
+// Volumen
+volumeMA = ta.sma(volume, volMA)
+
+// ============================================================================
+// CÁLCULO DE MÁXIMOS Y MÍNIMOS DE 52 SEMANAS
+// ============================================================================
+
+// 252 días trading ≈ 52 semanas
+// Ajustar según timeframe: para 4H usar más barras
+barsIn52Weeks = timeframe.isintraday ?
+     (timeframe.in_seconds(timeframe.period) <= 3600 ? 1512 : 252) : 252
+
+high52w = ta.highest(high, barsIn52Weeks)
+low52w = ta.lowest(low, barsIn52Weeks)
+
+// ============================================================================
+// TREND TEMPLATE - 8 CRITERIOS DE MINERVINI
+// ============================================================================
+
+// Criterios fundamentales del Trend Template
+criterion1 = close > ma150 and close > ma200
+criterion2 = ma150 > ma200
+criterion3 = ma200Rising
+criterion4 = ma50 > ma150 and ma50 > ma200
+criterion5 = close > ma50
+criterion6 = close >= low52w * (1 + priceAbove52wkLow / 100)
+criterion7 = close >= high52w * (1 - priceNear52wkHigh / 100)
+
+// Trend Template completo (7 criterios básicos)
+trendTemplate = criterion1 and criterion2 and criterion3 and criterion4 and
+                criterion5 and criterion6 and criterion7
+
+// ============================================================================
+// RELATIVE STRENGTH RATING
+// ============================================================================
+
+// Calcular rendimiento relativo vs benchmark (evitar repainting)
+benchmarkPrice = request.security(benchmarkSymbol, timeframe.period, close, barmerge.gaps_off, barmerge.lookahead_off)
+benchmarkPriceOld = request.security(benchmarkSymbol, timeframe.period, close[rsLength], barmerge.gaps_off, barmerge.lookahead_off)
+
+// Rendimientos
+stockReturn = nz((close - close[rsLength]) / close[rsLength] * 100, 0)
+benchmarkReturn = nz((benchmarkPrice - benchmarkPriceOld) / benchmarkPriceOld * 100, 0)
+relativePerformance = stockReturn - benchmarkReturn
+
+// Convertir a escala 0-100 (mejorado)
+rsRating = relativePerformance > 0 ?
+     math.min(50 + (relativePerformance * 5), 100) :
+     math.max(50 + (relativePerformance * 5), 0)
+
+criterion8 = enableRS ? rsRating >= rsThreshold : true
+
+// ============================================================================
+// DETECCIÓN DE PATRÓN VCP (SIMPLIFICADO Y ROBUSTO)
+// ============================================================================
+
+// VCP: detectar contracción de volatilidad
+// Comparar ATR actual con ATR hace N barras
+atrCurrent = atrContraction
+atrPast = atrContraction[vcpLookback]
+atrRatio = atrCurrent / atrPast
+
+// VCP válido: ATR actual es menor que ATR pasado (volatilidad contrayendo)
+// Y el precio se mantiene en un rango estrecho
+vcpContraction = atrRatio < contractionThreshold
+
+// Confirmar que estamos cerca de máximos (consolidación de fuerza)
+priceNearHighs = close > ta.highest(close, vcpLookback) * 0.90
+
+// VCP Pattern detectado
+vcpPattern = enableVCP ? (vcpContraction and priceNearHighs) : true
+
+// ============================================================================
+// ANÁLISIS DE VOLUMEN
+// ============================================================================
+
+// Volumen en ruptura
+volumeBreakout = volume > volumeMA * volBreakoutMultiplier
+
+// Acumulación institucional (más volumen en días verdes)
+greenVolume = close > close[1] ? volume : 0.0
+redVolume = close < close[1] ? volume : 0.0
+avgGreenVol = ta.sma(greenVolume, 10)
+avgRedVol = ta.sma(redVolume, 10)
+accumulation = avgGreenVol > avgRedVol
+
+// Filtro de volumen mínimo
+volumeFilter = ta.sma(volume, 20) > minVolume
+
+// ============================================================================
+// SEÑALES DE ENTRADA
+// ============================================================================
+
+// Ruptura de precio (breakout sobre máximo reciente)
+priceBreakout = close > ta.highest(high[1], 5)
+
+// Filtro de precio mínimo
+priceFilter = close > minPrice
+
+// Condición completa de entrada
+longCondition = trendTemplate and
+                criterion8 and
+                vcpPattern and
+                (requireVolBreakout ? volumeBreakout : true) and
+                accumulation and
+                priceBreakout and
+                volumeFilter and
+                priceFilter and
+                strategy.position_size == 0
+
+// ============================================================================
+// GESTIÓN DE POSICIONES Y STOP LOSS
+// ============================================================================
+
+// Calcular stop loss basado en tipo seleccionado
+float stopDistance = stopLossType == "ATR" ?
+     atr * stopLossATRMulti :
+     close * (stopLossPercent / 100)
+
+// Variables para trailing stop
+var float trailStopLevel = na
+var float highestPriceSinceEntry = na
+
+// ============================================================================
+// ENTRADA
+// ============================================================================
+
+if longCondition
+    // Calcular niveles de entrada
+    entryPrice = close
+    stopLevel = entryPrice - stopDistance
+    riskAmount = stopDistance
+    targetLevel = entryPrice + (riskAmount * takeProfitRatio)
+
+    // Ejecutar entrada
+    strategy.entry("LONG", strategy.long, comment="VCP Entry")
+
+    // Inicializar trailing stop
+    trailStopLevel := stopLevel
+    highestPriceSinceEntry := close
+
+// ============================================================================
+// GESTIÓN DE TRAILING STOP Y SALIDAS
+// ============================================================================
+
+if strategy.position_size > 0
+    // Actualizar precio máximo desde entrada
+    if na(highestPriceSinceEntry)
+        highestPriceSinceEntry := close
+    else
+        highestPriceSinceEntry := math.max(highestPriceSinceEntry, high)
+
+    // Calcular stop loss inicial si no existe
+    if na(trailStopLevel)
+        entryP = strategy.position_avg_price
+        stopDist = stopLossType == "ATR" ? atr * stopLossATRMulti : entryP * (stopLossPercent / 100)
+        trailStopLevel := entryP - stopDist
+
+    // Calcular R múltiplo (ganancia en términos de riesgo)
+    entryP = strategy.position_avg_price
+    initialRisk = entryP - trailStopLevel
+    currentProfit = close - entryP
+    rMultiple = initialRisk > 0 ? currentProfit / initialRisk : 0
+
+    // TRAILING STOP LOGIC
+    if enableTrailing and rMultiple >= trailActivation
+        // Calcular nuevo nivel de trailing stop
+        float newTrailStop = na
+
+        if trailType == "ATR"
+            newTrailStop := highestPriceSinceEntry - (atr * trailATRMulti)
+        else  // Percentage
+            newTrailStop := highestPriceSinceEntry * (1 - trailPercent / 100)
+
+        // Solo subir el stop, nunca bajarlo
+        trailStopLevel := math.max(trailStopLevel, newTrailStop)
+
+        // Mover a breakeven si está activado
+        if moveToBreakeven
+            trailStopLevel := math.max(trailStopLevel, entryP)
+
+    // Calcular take profit
+    targetPrice = entryP + (initialRisk * takeProfitRatio)
+
+    // CONDICIONES DE SALIDA
+
+    // 1. Stop Loss (trailing o inicial)
+    if low <= trailStopLevel
+        strategy.close("LONG", comment="Stop Loss")
+        trailStopLevel := na
+        highestPriceSinceEntry := na
+
+    // 2. Take Profit
+    else if high >= targetPrice
+        strategy.close("LONG", comment="Take Profit " + str.tostring(takeProfitRatio) + "R")
+        trailStopLevel := na
+        highestPriceSinceEntry := na
+
+    // 3. Salida por ruptura de tendencia
+    else if exitOnTrendBreak and close < ma50
+        strategy.close("LONG", comment="MA50 Break")
+        trailStopLevel := na
+        highestPriceSinceEntry := na
+
+    else if exitOnMA150Break and close < ma150
+        strategy.close("LONG", comment="MA150 Break")
+        trailStopLevel := na
+        highestPriceSinceEntry := na
+
+// Resetear variables cuando no hay posición
+if strategy.position_size == 0
+    trailStopLevel := na
+    highestPriceSinceEntry := na
+
+// ============================================================================
+// VISUALIZACIÓN EN GRÁFICO
+// ============================================================================
+
+// Plotear medias móviles
+plot(showMAs ? ma50 : na, "MA 50", color=color.new(#2962FF, 0), linewidth=2)
+plot(showMAs ? ma150 : na, "MA 150", color=color.new(#FF6D00, 0), linewidth=2)
+plot(showMAs ? ma200 : na, "MA 200", color=color.new(#E91E63, 0), linewidth=2)
+
+// Colorear fondo cuando Trend Template está activo
+bgcolor(trendTemplate ? color.new(color.green, 95) : na, title="Trend Template")
+
+// Plotear niveles de 52 semanas
+plot(showLevels ? high52w : na, "52W High", color=color.new(#00C853, 70),
+     style=plot.style_stepline, linewidth=1)
+plot(showLevels ? low52w : na, "52W Low", color=color.new(#D50000, 70),
+     style=plot.style_stepline, linewidth=1)
+
+// Señales visuales
+plotshape(longCondition, "Buy Signal", shape.triangleup, location.belowbar,
+          color.new(#00C853, 0), size=size.normal)
+
+plotshape(vcpPattern and enableVCP and not vcpPattern[1], "VCP", shape.diamond,
+          location.abovebar, color.new(#9C27B0, 20), size=size.tiny)
+
+// Visualizar niveles cuando hay posición abierta
+inPosition = strategy.position_size > 0
+
+plot(inPosition ? trailStopLevel : na, "Stop Loss", color=color.new(#F44336, 0),
+     style=plot.style_linebr, linewidth=2)
+
+plot(inPosition and not na(strategy.position_avg_price) ?
+     strategy.position_avg_price + ((strategy.position_avg_price - trailStopLevel) * takeProfitRatio) : na,
+     "Take Profit", color=color.new(#4CAF50, 0), style=plot.style_linebr, linewidth=2)
+
+plot(inPosition ? strategy.position_avg_price : na, "Entry", color=color.new(#2196F3, 50),
+     style=plot.style_linebr, linewidth=1, style=plot.style_circles)
+
+// Zonas de riesgo/beneficio
+var color colorRisk = color.new(#F44336, 90)
+var color colorReward = color.new(#4CAF50, 90)
+
+entryPlot = plot(inPosition and showZones ? strategy.position_avg_price : na, display=display.none)
+stopPlot = plot(inPosition and showZones ? trailStopLevel : na, display=display.none)
+targetPlot = plot(inPosition and showZones ?
+     strategy.position_avg_price + ((strategy.position_avg_price - trailStopLevel) * takeProfitRatio) : na,
+     display=display.none)
+
+fill(entryPlot, stopPlot, color=colorRisk, title="Risk Zone")
+fill(entryPlot, targetPlot, color=colorReward, title="Reward Zone")
+
+// ============================================================================
+// TABLA DE INFORMACIÓN
+// ============================================================================
+
+if showTable
+    var table infoTable = table.new(position.top_right, 2, 12,
+         bgcolor=color.new(#000000, 85),
+         frame_color=color.new(#424242, 50),
+         frame_width=1,
+         border_width=1,
+         border_color=color.new(#616161, 50))
+
+    if barstate.islast
+        // Encabezado
+        table.cell(infoTable, 0, 0, "CHAMPION TRADERS", text_color=#FFFFFF,
+                   bgcolor=color.new(#1976D2, 30), text_size=size.normal)
+        table.cell(infoTable, 1, 0, "STATUS", text_color=#FFFFFF,
+                   bgcolor=color.new(#1976D2, 30), text_size=size.normal)
+
+        // Trend Template
+        table.cell(infoTable, 0, 1, "Trend Template", text_color=#E0E0E0, text_size=size.small)
+        table.cell(infoTable, 1, 1, trendTemplate ? "✓ ACTIVO" : "✗ Inactivo",
+                   text_color=trendTemplate ? #00E676 : #FF5252, text_size=size.small)
+
+        // Relative Strength
+        table.cell(infoTable, 0, 2, "RS Rating", text_color=#E0E0E0, text_size=size.small)
+        rsColor = rsRating >= rsThreshold ? #00E676 : (rsRating >= 50 ? #FFC107 : #FF5252)
+        table.cell(infoTable, 1, 2, str.tostring(math.round(rsRating)),
+                   text_color=rsColor, text_size=size.small)
+
+        // VCP Pattern
+        table.cell(infoTable, 0, 3, "VCP Pattern", text_color=#E0E0E0, text_size=size.small)
+        table.cell(infoTable, 1, 3, vcpPattern ? "✓ Detectado" : "✗ No",
+                   text_color=vcpPattern ? #00E676 : #9E9E9E, text_size=size.small)
+
+        // ATR Ratio
+        table.cell(infoTable, 0, 4, "ATR Ratio", text_color=#E0E0E0, text_size=size.small)
+        table.cell(infoTable, 1, 4, str.tostring(math.round(atrRatio, 2)),
+                   text_color=#64B5F6, text_size=size.small)
+
+        // Volumen
+        volRatio = volume / volumeMA
+        table.cell(infoTable, 0, 5, "Vol Ratio", text_color=#E0E0E0, text_size=size.small)
+        volColor = volRatio >= volBreakoutMultiplier ? #00E676 : #9E9E9E
+        table.cell(infoTable, 1, 5, str.tostring(math.round(volRatio, 2)) + "x",
+                   text_color=volColor, text_size=size.small)
+
+        // Acumulación
+        table.cell(infoTable, 0, 6, "Acumulación", text_color=#E0E0E0, text_size=size.small)
+        table.cell(infoTable, 1, 6, accumulation ? "✓ SÍ" : "✗ NO",
+                   text_color=accumulation ? #00E676 : #9E9E9E, text_size=size.small)
+
+        // Distancia 52W High
+        dist52H = ((high52w - close) / high52w) * 100
+        table.cell(infoTable, 0, 7, "Dist. 52W High", text_color=#E0E0E0, text_size=size.small)
+        table.cell(infoTable, 1, 7, str.tostring(math.round(dist52H, 1)) + "%",
+                   text_color=#FFC107, text_size=size.small)
+
+        // Distancia 52W Low
+        dist52L = ((close - low52w) / low52w) * 100
+        table.cell(infoTable, 0, 8, "Dist. 52W Low", text_color=#E0E0E0, text_size=size.small)
+        table.cell(infoTable, 1, 8, str.tostring(math.round(dist52L, 1)) + "%",
+                   text_color=#FFC107, text_size=size.small)
+
+        // Separador
+        table.cell(infoTable, 0, 9, "─────────────", text_color=#424242, text_size=size.small)
+        table.cell(infoTable, 1, 9, "─────────────", text_color=#424242, text_size=size.small)
+
+        // Estado de posición
+        table.cell(infoTable, 0, 10, "POSICIÓN", text_color=#E0E0E0, text_size=size.small)
+
+        if inPosition
+            entryP = strategy.position_avg_price
+            initialRisk = entryP - trailStopLevel
+            currentProfit = close - entryP
+            rMult = initialRisk > 0 ? currentProfit / initialRisk : 0
+
+            table.cell(infoTable, 1, 10, str.tostring(math.round(rMult, 2)) + "R",
+                       text_color=rMult >= 0 ? #00E676 : #FF5252, text_size=size.normal)
+
+            // P&L
+            pnlPercent = ((close - entryP) / entryP) * 100
+            table.cell(infoTable, 0, 11, "P&L", text_color=#E0E0E0, text_size=size.small)
+            table.cell(infoTable, 1, 11, str.tostring(math.round(pnlPercent, 2)) + "%",
+                       text_color=pnlPercent >= 0 ? #00E676 : #FF5252, text_size=size.small)
+        else
+            table.cell(infoTable, 1, 10, "SIN POSICIÓN", text_color=#9E9E9E, text_size=size.small)
+            table.cell(infoTable, 0, 11, "Esperando", text_color=#9E9E9E, text_size=size.small)
+            table.cell(infoTable, 1, 11, "señal...", text_color=#9E9E9E, text_size=size.small)
+
+// ============================================================================
+// ALERTAS
+// ============================================================================
+
+alertcondition(longCondition, title="Señal de Compra",
+     message="Champion Traders: Señal de compra detectada en {{ticker}}")
+
+alertcondition(strategy.position_size > 0 and strategy.position_size[1] == 0,
+     title="Posición Abierta",
+     message="Champion Traders: Posición LONG abierta en {{ticker}} @ {{close}}")
+
+alertcondition(strategy.position_size == 0 and strategy.position_size[1] > 0,
+     title="Posición Cerrada",
+     message="Champion Traders: Posición cerrada en {{ticker}} @ {{close}}")
+
+// ============================================================================
+// FIN DE LA ESTRATEGIA
+// ============================================================================
